@@ -1,9 +1,8 @@
 const express = require('express');
-const cors = require('cors'); // 1. Підключаємо cors
+const cors = require('cors'); 
 const app = express();
 const port = 4000;
 
-// 2. Дозволяємо доступ всім
 app.use(cors());
 
 app.use(express.static(__dirname));
