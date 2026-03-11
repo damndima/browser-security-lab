@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const cors = require('cors'); // 1. Підключаємо cors
+const cors = require('cors');
 
 const app = express();
 const port = 3000;
@@ -10,7 +10,6 @@ const version = fs.readFileSync('version.txt', 'utf8').trim();
 
 console.log(`[System] Starting ${config.appName} v${version}...`);
 
-// 2. Вмикаємо CORS, якщо в конфігу стоїть mode1
 if (config.mode === "mode1") {
     app.use(cors()); 
 }
