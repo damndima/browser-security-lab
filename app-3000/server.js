@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const cors = require('cors'); // 1. Підключаємо cors
+const cors = require('cors');
 
 const app = express();
 const port = 3000;
@@ -10,10 +10,17 @@ const version = fs.readFileSync('version.txt', 'utf8').trim();
 
 console.log(`[System] Starting ${config.appName} v${version}...`);
 
-// 2. Вмикаємо CORS, якщо в конфігу стоїть mode1
 if (config.mode === "mode1") {
     app.use(cors()); 
 }
+
+app.use((req, res, next) => {
+    if (config.mode === "csp-strict") {
+        res.setHeader("Content-Security-Policy", "default-src 'self';");
+    } else if (config.mode === "csp-balanced") {
+        res.setHeader("Content-Security-Policy", "default-src 'self'; img-src *; style-src * 'unsafe-inline'; script-src 'self' http://localhost:4000 http://localhost:6001; connect-src 'self' http://localhost:4000;");    }
+    next();
+});
 
 app.use(express.static(__dirname));
 
