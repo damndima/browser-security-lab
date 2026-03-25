@@ -58,7 +58,7 @@ app.get('/login', (req, res) => {
     const username = req.query.username; 
     
     if (users[username]) {
-        res.setHeader('Set-Cookie', `SessionID=${users[username]}; Path=/api; HttpOnly`);
+        res.setHeader('Set-Cookie', `SessionID=${users[username]}; Path=/api; HttpOnly; Secure`);
         res.json({ success: true, message: "Login Successful!" });
     } else {
         res.status(401).json({ success: false, message: "User not found" });
