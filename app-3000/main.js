@@ -1,4 +1,3 @@
-document.cookie = "SessionID=123456";
 
 fetch('/api/emails')
     .then(response => response.json())
@@ -18,3 +17,19 @@ fetch('/api/emails')
             listContainer.appendChild(div);
         });
     });
+
+
+document.getElementById('login-btn').onclick = () => {
+    const usernameInput = document.getElementById('username-input').value.toLowerCase();
+    
+    fetch(`/login?username=${usernameInput}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('username').innerText = `Logged in as ${usernameInput}`;
+                console.log(data.message);
+            } else {
+                alert("Помилка: Користувача не знайдено!");
+            }
+        });
+};

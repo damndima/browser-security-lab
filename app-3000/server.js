@@ -48,6 +48,22 @@ app.get('/api/emails', (req, res) => {
   res.json(emails);
 });
 
+const users = {
+    "mario": "session-mario-777",
+    "luigi": "session-luigi-888"
+};
+
+app.get('/login', (req, res) => {
+    const username = req.query.username; 
+    
+    if (users[username]) {
+        res.setHeader('Set-Cookie', `SessionID=${users[username]}; Path=/`);
+        res.json({ success: true, message: "Login Successful!" });
+    } else {
+        res.status(401).json({ success: false, message: "User not found" });
+    }
+});
+
 app.listen(port, () => {
   console.log(`GoodHost is running on http://localhost:${port}`);
 });
