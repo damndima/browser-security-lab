@@ -22,6 +22,21 @@ app.use((req, res, next) => {
     next();
 });
 
+app.get('/', (req, res) => {
+    let html = fs.readFileSync('index.html', 'utf8');
+    let reactScript = '';
+
+    if (config.mode === 'mode-sri-active') {
+        reactScript = '<script src="http://localhost:6001/react-mock.js" integrity="sha256-ZUbuC7W+uSiutmjIyPPY/QRd+CnexOXX8ClnzumKbEk=" crossorigin="anonymous"></script>';
+    } else if (config.mode === 'mode-insecure') {
+        reactScript = '<script src="http://localhost:6001/react-mock.js"></script>';
+    }
+
+    html = html.replace('', reactScript);
+    
+    res.send(html);
+});
+
 app.use(express.static(__dirname));
 
 const emails = [
