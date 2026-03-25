@@ -45,6 +45,7 @@ const emails = [
 ];
 
 app.get('/api/emails', (req, res) => {
+  console.log("📨 Запит на /api/emails. Надіслані кукі:", req.headers.cookie);
   res.json(emails);
 });
 
@@ -57,11 +58,16 @@ app.get('/login', (req, res) => {
     const username = req.query.username; 
     
     if (users[username]) {
-        res.setHeader('Set-Cookie', `SessionID=${users[username]}; Path=/; HttpOnly`);
+        res.setHeader('Set-Cookie', `SessionID=${users[username]}; Path=/api; HttpOnly`);
         res.json({ success: true, message: "Login Successful!" });
     } else {
         res.status(401).json({ success: false, message: "User not found" });
     }
+});
+
+app.get('/other', (req, res) => {
+    console.log("🌐 Запит на /other. Надіслані кукі:", req.headers.cookie);
+    res.send("Це публічна сторінка.");
 });
 
 app.listen(port, () => {
