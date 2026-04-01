@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
         reactScript = '<script src="http://localhost:6001/react-mock.js"></script>';
     }
 
-    html = html.replace('', reactScript);
+    html = html.replace('', reactScript); 
     
     res.send(html);
 });
@@ -44,30 +44,54 @@ const emails = [
   { id: 2, sender: "promo@shop.com", subject: "Знижки!", body: "Тільки сьогодні -50% на все." }
 ];
 
-app.get('/api/emails', (req, res) => {
-  console.log("📨 Запит на /api/emails. Надіслані кукі:", req.headers.cookie);
-  res.json(emails);
-});
-
 const users = {
     "mario": "session-mario-777",
     "luigi": "session-luigi-888"
 };
 
+let activeSessions = [];
+
 app.get('/login', (req, res) => {
     const username = req.query.username; 
     
     if (users[username]) {
-        res.setHeader('Set-Cookie', `SessionID=${users[username]}; Path=/api`);
+        const sessionId = users[username];
+        
+        if (!activeSessions.includes(sessionId)) {
+            activeSessions.push(sessionId);
+        }
+
+        res.setHeader('Set-Cookie', `SessionID=${sessionId}; Path=/api; HttpOnly; Secure`);
         res.json({ success: true, message: "Login Successful!" });
     } else {
         res.status(401).json({ success: false, message: "User not found" });
     }
 });
 
-app.get('/other', (req, res) => {
-    console.log("🌐 Запит на /other. Надіслані кукі:", req.headers.cookie);
-    res.send("Це публічна сторінка.");
+app.get('/api/logout', (req, res) => {
+    const cookieHeader = req.headers.cookie;
+    
+    if (cookieHeader && cookieHeader.includes('SessionID=')) {
+        const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
+        activeSessions = activeSessions.filter(id => id !== sessionId); 
+    }
+    
+    res.setHeader('Set-Cookie', `SessionID=; Path=/api; HttpOnly; Secure; expires=Thu, 01 Jan 1970 00:00:00 UTC`);
+    res.json({ success: true, message: "Logged out from server" });
+});
+
+app.get('/api/emails', (req, res) => {
+    const cookieHeader = req.headers.cookie;
+
+    if (cookieHeader && cookieHeader.includes('SessionID=')) {
+        const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
+        
+        if (activeSessions.includes(sessionId)) {
+            return res.json(emails); 
+        }
+    }
+
+    res.status(401).json({ error: "401 Unauthorized: Session is dead or invalid" });
 });
 
 app.listen(port, () => {

@@ -35,8 +35,10 @@ document.getElementById('login-btn').onclick = () => {
 };
 
 document.getElementById('logout-btn').onclick = () => {
-    document.cookie = "SessionID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/api;";
-    
-    document.getElementById('username').innerText = "Гість";
-    alert("Ви вийшли з системи (але чи справді?)");
+    fetch('/api/logout')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('username').innerText = "Гість";
+            alert("Серверний Logout успішний! Зомбі знищено.");
+        });
 };
