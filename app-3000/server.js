@@ -49,7 +49,7 @@ const users = {
     "luigi": "session-luigi-888"
 };
 
-let activeSessions = [];
+let activeSessions = {}; 
 
 app.get('/login', (req, res) => {
     const username = req.query.username; 
@@ -57,9 +57,7 @@ app.get('/login', (req, res) => {
     if (users[username]) {
         const sessionId = users[username];
         
-        if (!activeSessions.includes(sessionId)) {
-            activeSessions.push(sessionId);
-        }
+        activeSessions[sessionId] = Date.now(); 
 
         res.setHeader('Set-Cookie', `SessionID=${sessionId}; Path=/api; HttpOnly; Secure`);
         res.json({ success: true, message: "Login Successful!" });
@@ -73,7 +71,8 @@ app.get('/api/logout', (req, res) => {
     
     if (cookieHeader && cookieHeader.includes('SessionID=')) {
         const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
-        activeSessions = activeSessions.filter(id => id !== sessionId); 
+        
+        delete activeSessions[sessionId]; 
     }
     
     res.setHeader('Set-Cookie', `SessionID=; Path=/api; HttpOnly; Secure; expires=Thu, 01 Jan 1970 00:00:00 UTC`);
@@ -86,8 +85,18 @@ app.get('/api/emails', (req, res) => {
     if (cookieHeader && cookieHeader.includes('SessionID=')) {
         const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
         
-        if (activeSessions.includes(sessionId)) {
-            return res.json(emails); 
+        if (activeSessions[sessionId]) {
+            
+            const sessionAgeMs = Date.now() - activeSessions[sessionId];
+            const twoMinutesMs = 2 * 60 * 1000;
+            
+            if (sessionAgeMs > twoMinutesMs) {
+                console.log(`[Сервер] Сесія ${sessionId} застаріла! Вбиваємо...`);
+                delete activeSessions[sessionId];
+                return res.status(401).json({ error: "401 Unauthorized: Session expired" });
+            }
+            
+            return res.json(emails);
         }
     }
 
