@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
+const crypto = require('crypto');
 
 const app = express();
 const port = 3000;
@@ -33,7 +34,6 @@ app.get('/', (req, res) => {
     }
 
     html = html.replace('', reactScript); 
-    
     res.send(html);
 });
 
@@ -56,11 +56,15 @@ app.get('/login', (req, res) => {
     
     if (users[username]) {
         const sessionId = users[username];
+        const csrfToken = crypto.randomBytes(16).toString('hex');
         
-        activeSessions[sessionId] = Date.now(); 
+        activeSessions[sessionId] = {
+            loginTime: Date.now(),
+            csrfToken: csrfToken
+        }; 
 
         res.setHeader('Set-Cookie', `SessionID=${sessionId}; Path=/api; HttpOnly; Secure; SameSite=Strict`);
-        res.json({ success: true, message: "Login Successful!" });
+        res.json({ success: true, message: "Login Successful!", token: csrfToken });
     } else {
         res.status(401).json({ success: false, message: "User not found" });
     }
@@ -68,13 +72,10 @@ app.get('/login', (req, res) => {
 
 app.get('/api/logout', (req, res) => {
     const cookieHeader = req.headers.cookie;
-    
     if (cookieHeader && cookieHeader.includes('SessionID=')) {
         const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
-        
         delete activeSessions[sessionId]; 
     }
-    
     res.setHeader('Set-Cookie', `SessionID=; Path=/api; HttpOnly; Secure; expires=Thu, 01 Jan 1970 00:00:00 UTC`);
     res.json({ success: true, message: "Logged out from server" });
 });
@@ -86,35 +87,35 @@ app.get('/api/emails', (req, res) => {
         const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
         
         if (activeSessions[sessionId]) {
-            
-            const sessionAgeMs = Date.now() - activeSessions[sessionId];
-            const twoMinutesMs = 2 * 60 * 1000;
-            
-            if (sessionAgeMs > twoMinutesMs) {
-                console.log(`[Сервер] Сесія ${sessionId} застаріла! Вбиваємо...`);
+            const sessionAgeMs = Date.now() - activeSessions[sessionId].loginTime;
+            if (sessionAgeMs > 2 * 60 * 1000) {
                 delete activeSessions[sessionId];
                 return res.status(401).json({ error: "401 Unauthorized: Session expired" });
             }
-            
             return res.json(emails);
         }
     }
-
-    res.status(401).json({ error: "401 Unauthorized: Session is dead or invalid" });
+    res.status(401).json({ error: "401 Unauthorized" });
 });
 
-app.get('/api/emails/delete/:id', (req, res) => {
+app.post('/api/emails/delete/:id', (req, res) => {
     const cookieHeader = req.headers.cookie;
+    const clientCsrfToken = req.headers['x-csrf-token'];
 
     if (cookieHeader && cookieHeader.includes('SessionID=')) {
         const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
         
         if (activeSessions[sessionId]) {
+            const serverCsrfToken = activeSessions[sessionId].csrfToken;
+            
+            if (!clientCsrfToken || clientCsrfToken !== serverCsrfToken) {
+                console.log(`[Сервер] БЛОКУВАННЯ! Неправильний CSRF токен від ${sessionId}`);
+                return res.status(403).json({ error: "403 Forbidden: Invalid CSRF Token" });
+            }
+
             const emailIdToDelete = parseInt(req.params.id);
-            
             emails = emails.filter(email => email.id !== emailIdToDelete);
-            
-            console.log(`[Сервер] Лист #${emailIdToDelete} видалено!`);
+            console.log(`[Сервер] Лист #${emailIdToDelete} безпечно видалено!`);
             return res.json({ success: true, message: "Email deleted" });
         }
     }
