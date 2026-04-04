@@ -59,7 +59,7 @@ app.get('/login', (req, res) => {
         
         activeSessions[sessionId] = Date.now(); 
 
-        res.setHeader('Set-Cookie', `SessionID=${sessionId}; Path=/api; HttpOnly; Secure`);
+        res.setHeader('Set-Cookie', `SessionID=${sessionId}; Path=/api; HttpOnly; Secure; SameSite=Strict`);
         res.json({ success: true, message: "Login Successful!" });
     } else {
         res.status(401).json({ success: false, message: "User not found" });
