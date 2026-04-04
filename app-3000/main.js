@@ -4,12 +4,29 @@ fetch('/api/emails')
     .then(emails => {
         const listContainer = document.getElementById('email-list');
         const contentContainer = document.getElementById('email-content');
+        
+        listContainer.innerHTML = '';
 
         emails.forEach(email => {
             const div = document.createElement('div');
             div.className = 'email-item';
-            div.innerText = `${email.subject} (від: ${email.sender})`;
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
             
+            const textSpan = document.createElement('span');
+            textSpan.innerText = `${email.subject} (від: ${email.sender})`;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerText = 'Delete';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                fetch(`/api/emails/delete/${email.id}`)
+                    .then(() => location.reload());
+            };
+
+            div.appendChild(textSpan);
+            div.appendChild(deleteBtn);
+
             div.onclick = () => {
                 contentContainer.innerHTML = `<h3>Від: ${email.sender}</h3><h4>Тема: ${email.subject}</h4><p>${email.body}</p>`;
             };

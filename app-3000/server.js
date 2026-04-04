@@ -39,7 +39,7 @@ app.get('/', (req, res) => {
 
 app.use(express.static(__dirname));
 
-const emails = [
+let emails = [
   { id: 1, sender: "boss@company.com", subject: "Звіт", body: "Будь ласка, надішліть звіт до вечора." },
   { id: 2, sender: "promo@shop.com", subject: "Знижки!", body: "Тільки сьогодні -50% на все." }
 ];
@@ -101,6 +101,24 @@ app.get('/api/emails', (req, res) => {
     }
 
     res.status(401).json({ error: "401 Unauthorized: Session is dead or invalid" });
+});
+
+app.get('/api/emails/delete/:id', (req, res) => {
+    const cookieHeader = req.headers.cookie;
+
+    if (cookieHeader && cookieHeader.includes('SessionID=')) {
+        const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
+        
+        if (activeSessions[sessionId]) {
+            const emailIdToDelete = parseInt(req.params.id);
+            
+            emails = emails.filter(email => email.id !== emailIdToDelete);
+            
+            console.log(`[Сервер] Лист #${emailIdToDelete} видалено!`);
+            return res.json({ success: true, message: "Email deleted" });
+        }
+    }
+    res.status(401).json({ error: "Unauthorized" });
 });
 
 app.listen(port, () => {
