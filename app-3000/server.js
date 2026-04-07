@@ -2,9 +2,10 @@ const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
 const crypto = require('crypto');
+const https = require('https');
+const http = require('http');
 
 const app = express();
-const port = 3000;
 
 const config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const version = fs.readFileSync('version.txt', 'utf8').trim();
@@ -16,6 +17,8 @@ if (config.mode === "mode1") {
 }
 
 app.use((req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
     if (config.mode === "csp-strict") {
         res.setHeader("Content-Security-Policy", "default-src 'self';");
     } else if (config.mode === "csp-balanced") {
@@ -100,7 +103,7 @@ app.get('/api/emails', (req, res) => {
 
 app.post('/api/emails/delete/:id', (req, res) => {
     const cookieHeader = req.headers.cookie;
-    const clientCsrfToken = req.headers['x-csrf-token'];
+    const clientCsrfToken = req.headers['x-csrf-token']; 
 
     if (cookieHeader && cookieHeader.includes('SessionID=')) {
         const sessionId = cookieHeader.split('SessionID=')[1].split(';')[0];
@@ -109,19 +112,31 @@ app.post('/api/emails/delete/:id', (req, res) => {
             const serverCsrfToken = activeSessions[sessionId].csrfToken;
             
             if (!clientCsrfToken || clientCsrfToken !== serverCsrfToken) {
-                console.log(`[Сервер] БЛОКУВАННЯ! Неправильний CSRF токен від ${sessionId}`);
                 return res.status(403).json({ error: "403 Forbidden: Invalid CSRF Token" });
             }
 
             const emailIdToDelete = parseInt(req.params.id);
             emails = emails.filter(email => email.id !== emailIdToDelete);
-            console.log(`[Сервер] Лист #${emailIdToDelete} безпечно видалено!`);
             return res.json({ success: true, message: "Email deleted" });
         }
     }
     res.status(401).json({ error: "Unauthorized" });
 });
 
-app.listen(port, () => {
-  console.log(`GoodHost is running on http://localhost:${port}`);
+const httpsOptions = {
+    key: fs.readFileSync('key.pem'),
+    cert: fs.readFileSync('cert.pem')
+};
+
+https.createServer(httpsOptions, app).listen(3443, () => {
+    console.log(`🔒 Secure Server is running on https://localhost:3443`);
+});
+
+const redirectApp = express();
+redirectApp.use((req, res) => {
+    res.redirect(301, `https://localhost:3443${req.url}`);
+});
+
+http.createServer(redirectApp).listen(3000, () => {
+    console.log(`➡️ HTTP Redirect Server is catching requests on http://localhost:3000`);
 });
